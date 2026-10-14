@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robux и Stars</title>
+<style>
+  :root { --bg:#f4f6fb; --card:#fff; --text:#1c1c1e; --muted:#666; --accent:#2AABEE; --line:#e3e6ee; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111; --card:#1c1c1e; --text:#eee; --muted:#aaa; --line:#333; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--text);
+         font-family:Arial,sans-serif; line-height:1.5; }
+  .wrap { max-width:420px; margin:0 auto; }
+  .card { background:var(--card); border-radius:16px; padding:20px; margin-bottom:16px;
+          box-shadow:0 4px 20px rgba(0,0,0,.08); }
+  h1 { margin:0 0 4px; font-size:24px; }
+  h2 { margin:0 0 12px; font-size:18px; }
+  .muted { color:var(--muted); font-size:14px; }
+  .tabs { display:flex; gap:8px; margin:12px 0; }
+  .tab { flex:1; padding:10px; border:1px solid var(--line); border-radius:10px;
+         background:transparent; color:var(--text); font-size:15px; cursor:pointer; }
+  .tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  input { width:100%; padding:12px; font-size:16px; border-radius:10px;
+          border:1px solid var(--line); background:transparent; color:var(--text); }
+  .price { font-size:28px; font-weight:bold; margin:14px 0 4px; }
+  a.btn { display:block; text-align:center; padding:14px; margin-top:14px;
+          background:var(--accent); color:#fff; text-decoration:none;
+          border-radius:12px; font-weight:bold; }
+  ol { padding-left:20px; margin:0; }
+  li { margin-bottom:6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <h1>Robux и Telegram Stars</h1>
+    <div class="muted" id="rateInfo">Загружаю курс доллара…</div>
+
+    <div class="tabs">
+      <button class="tab active" id="tabRobux">🎮 Robux</button>
+      <button class="tab" id="tabStars">⭐ Stars</button>
+    </div>
+
+    <input type="number" id="amount" inputmode="numeric" placeholder="Количество">
+    <div class="muted" id="limits"></div>
+
+    <div class="price" id="price">0 ₽</div>
+    <div class="muted" id="usd"></div>
+
+    <a class="btn" id="buyBtn" href="#" target="_blank">Оформить в Telegram</a>
+  </div>
+
+  <div class="card">
+    <h2>📖 Как купить</h2>
+    <ol>
+      <li>Выберите товар и введите количество.</li>
+      <li>Нажмите «Оформить в Telegram» и укажите ник боту.</li>
+      <li>Оплатите по реквизитам и нажмите «Я оплатил».</li>
+      <li>Мы проверим оплату и выдадим заказ вручную.</li>
+    </ol>
+    <p class="muted"><b>Robux:</b> геймпасс создаётся с ценой Robux ÷ 0,7
+      (Roblox берёт 30% комиссии). Нужен только ник.</p>
+    <p class="muted"><b>Stars:</b> отправляем на ваш @username.</p>
+    <p class="muted">🔒 Никогда не присылайте пароль, код из почты или cookie.</p>
+  </div>
+
+</div>
+
+<script>
+  // ===== НАСТРОЙКИ =====
+  const BOT_LINK = "https://t.me/ИМЯ_ВАШЕГО_БОТА"; // без @
+  const FALLBACK_RATE = 90;                         // запасной курс доллара
+  const PRODUCTS = {
+    robux: { name: "Robux", priceUsd: 0.010, min: 100, max: 50000 },
+    stars: { name: "Stars",  priceUsd: 0.015, min: 50,  max: 10000 }
+  };
+  // =====================
+
+  let rate = FALLBACK_RATE;
+  let current = "robux";
+
+  const $ = id => document.getElementById(id);
+
+  async function loadRate() {
+    try {
+      const r = await fetch("https://www.cbr-xml-daily.ru/daily_json.js");
+      const d = await r.json();
+      rate = d.Valute.USD.Value;
+      $("rateInfo").textContent = "Курс ЦБ РФ: 1 $ = " + rate.toFixed(2) + " ₽";
+    } catch (e) {
+      $("rateInfo").textContent = "Курс задан вручную: 1 $ = " + rate.toFixed(2) + " ₽";
+    }
+    update();
+  }
+
+  function update() {
+    const p = PRODUCTS[current];
+    const n = parseInt($("amount").value, 10) || 0;
+    const valid = n >= p.min && n <= p.max;
+    const usd = n * p.priceUsd;
+    $("limits").textContent = "От " + p.min + " до " + p.max;
+    $("price").textContent = valid ? Math.ceil(usd * rate) + " ₽" : "—";
+    $("usd").textContent = valid ? "≈ " + usd.toFixed(2) + " $" : "";
+    $("buyBtn").href = BOT_LINK;
+    $("buyBtn").style.opacity = valid ? 1 : 0.5;
+  }
+
+  function select(type) {
+    current = type;
+    $("tabRobux").classList.toggle("active", type === "robux");
+    $("tabStars").classList.toggle("active", type === "stars");
+    $("amount").value = "";
+    update();
+  }
+
+  $("tabRobux").onclick = () => select("robux");
+  $("tabStars").onclick = () => select("stars");
+  $("amount").oninput = update;
+
+  select("robux");
+  loadRate();
+</script>
+</body>
+</html>
